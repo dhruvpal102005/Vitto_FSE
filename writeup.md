@@ -15,9 +15,9 @@ We designed and built a full-stack **Loan Application Portal** with a premium "W
 ---
 
 ## 2. Technical Stack & Deployment Choices
-* **Architecture:** Monorepo containing a standalone React.js static site for the frontend and an Express.js API for the backend.
-* **Hosting / Deployment:** Deployed as a single, unified project on **Vercel**. By routing `/api/*` to the serverless function handler `api/index.js` and rewriting all other paths to the static Vite build `/index.html`, the entire application runs under a single domain. This completely eliminates CORS complexities and optimizes latency.
-* **Database:** **Neon PostgreSQL** serverless instance. Parameterized raw queries are used with the `pg` driver (no ORM) to keep database interactions direct and high-performance. Auto-migrations run on boot and serverless cold starts.
+* **Architecture:** Monorepo structure grouping the standalone React.js (Vite) frontend and the Node.js (Express) backend.
+* **Hosting & Unified Deployment:** Hosted on **Vercel** as a single deployment using the `experimentalServices` router. By defining the routing prefixes (`/` for frontend and `/_/backend` for backend), the entire full-stack app resolves under a single domain. This eliminates CORS complexities, unifies environment setups, and optimizes route latencies.
+* **Database:** **Neon PostgreSQL** serverless instance. Parameterized queries are used with the `pg` driver (no ORM) to keep database interactions fast, transparent, and direct. Auto-migrations run on boot and container cold starts.
 
 ---
 

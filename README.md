@@ -177,19 +177,30 @@ Get dashboard metrics summaries.
 
 ---
 
-### Option A: Single Vercel Monorepo Deployment (Recommended)
-This method hosts **both** the React frontend and Express backend together under a single Vercel project on the same domain. It uses serverless function routing, avoids CORS settings, and supports automatic relative URL routing.
+### Option A: Vercel Multi-Service Monorepo Deployment (Recommended)
+This method hosts **both** the React frontend and Express backend together under a single Vercel project on the same domain using Vercel's `experimentalServices` router. This avoids CORS blocks and automatically routes backend requests.
 
-1. Import your repository into **Vercel**.
-2. **Framework Preset:** Select **Vite**.
-3. **Root Directory:** Keep as the root directory (do **NOT** change to `frontend`).
-4. **Build & Development Settings:**
-   * **Build Command:** Toggle override and type `cd frontend && npm install && npm run build`
-   * **Output Directory:** Toggle override and type `frontend/dist`
-5. **Environment Variables:**
-   * `DATABASE_URL` = `<your_neon_db_url>`
-   * `NODE_ENV` = `production`
-6. Click **Deploy**. Vercel will install the root dependencies, build the frontend, and automatically run the backend serverless routes configured in `api/index.js`.
+1. Make sure the root-level [vercel.json](file:///c:/Users/dhruv/Desktop/Assignment/vercel.json) config is committed:
+   ```json
+   {
+     "experimentalServices": {
+       "frontend": {
+         "root": "frontend",
+         "routePrefix": "/",
+         "framework": "vite"
+       },
+       "backend": {
+         "root": "backend",
+         "routePrefix": "/_/backend"
+       }
+     }
+   }
+   ```
+2. Import your repository into **Vercel**.
+3. Vercel will automatically read the `vercel.json` config and link the frontend and backend services.
+4. **Environment Variables:**
+   * Configure `DATABASE_URL` = `<your_neon_db_url>` and `NODE_ENV` = `production` on your Vercel project.
+5. Click **Deploy**. Vercel will build the frontend statically and serve it at `/`, compile the backend to serverless handlers under the `/_/backend` prefix, and automatically run the migrations on start.
 
 ---
 
