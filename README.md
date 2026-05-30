@@ -191,7 +191,8 @@ This method hosts **both** the React frontend and Express backend together under
        },
        "backend": {
          "root": "backend",
-         "routePrefix": "/_/backend"
+         "routePrefix": "/_/backend",
+         "entrypoint": "index.js"
        }
      }
    }
