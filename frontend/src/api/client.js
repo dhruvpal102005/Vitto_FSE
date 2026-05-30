@@ -1,4 +1,13 @@
-const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '/_/backend/api');
+const getApiBase = () => {
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    return envUrl;
+  }
+  return isLocalhost ? 'http://localhost:5000/api' : '/_/backend/api';
+};
+
+const API_BASE = getApiBase();
 
 export const apiClient = {
   getSummary: async () => {
