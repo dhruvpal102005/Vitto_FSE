@@ -43,7 +43,10 @@ export const getApplications = async (req, res, next) => {
     if (search) {
       const searchPattern = `%${search.trim()}%`;
       queryParams.push(searchPattern);
-      conditions.push(`(name ILIKE $${queryParams.length} OR mobile ILIKE $${queryParams.length})`);
+      const nameIdx = queryParams.length;
+      queryParams.push(searchPattern);
+      const mobileIdx = queryParams.length;
+      conditions.push(`(name ILIKE $${nameIdx} OR mobile ILIKE $${mobileIdx})`);
     }
 
     if (conditions.length > 0) {
@@ -54,6 +57,20 @@ export const getApplications = async (req, res, next) => {
 
     const result = await pool.query(queryText, queryParams);
     res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/applications/:id
+export const getApplicationById = async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM applications WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+    res.status(200).json(result.rows[0]);
   } catch (error) {
     next(error);
   }

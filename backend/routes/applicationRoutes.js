@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createApplication,
+  getApplicationById,
   getApplications,
   updateApplicationStatus,
   getSummary
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.post('/applications', validateApplication, createApplication);
 router.get('/applications', getApplications);
+router.get('/applications/:id', getApplicationById);
 router.patch('/applications/:id/status', validateStatus, updateApplicationStatus);
 router.get('/summary', getSummary);
 

@@ -20,33 +20,22 @@ const Details = ({ applicationId, onBack, onStatusUpdated }) => {
     const fetchDetails = async () => {
       setIsLoading(true);
       try {
-        // GET /api/applications supports fetching all, we can filter for the specific ID client-side
-        // to minimize endpoints or fetch direct. Wait, our API design has GET /api/applications.
-        // We can just fetch all applications and find by ID, OR we can fetch direct if we had a detail route.
-        // Wait, the API contract in the prompt has:
-        // GET /api/applications (returns all applications, ordered by latest first)
-        // Let's fetch all applications and find the specific one! This perfectly complies with the required API verbs.
-        const apps = await apiClient.getApplications();
-        const found = apps.find(a => a.id === applicationId);
-        if (!found) {
-          setError('Application not found.');
+        const found = await apiClient.getApplication(applicationId);
+        setApplication(found);
+        // Retrieve custom notes from local storage
+        const storedNotes = localStorage.getItem(`notes_${applicationId}`);
+        if (storedNotes) {
+          setNotes(JSON.parse(storedNotes));
         } else {
-          setApplication(found);
-          // Retrieve custom notes if any from local storage
-          const storedNotes = localStorage.getItem(`notes_${applicationId}`);
-          if (storedNotes) {
-            setNotes(JSON.parse(storedNotes));
-          } else {
-            const initialNotes = [
-              {
-                author: 'System',
-                text: `Application filed in ${found.language}. Received status: pending.`,
-                timestamp: 'Created'
-              }
-            ];
-            setNotes(initialNotes);
-            localStorage.setItem(`notes_${applicationId}`, JSON.stringify(initialNotes));
-          }
+          const initialNotes = [
+            {
+              author: 'System',
+              text: `Application filed in ${found.language}. Received status: pending.`,
+              timestamp: 'Created'
+            }
+          ];
+          setNotes(initialNotes);
+          localStorage.setItem(`notes_${applicationId}`, JSON.stringify(initialNotes));
         }
       } catch (err) {
         console.error(err);

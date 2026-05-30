@@ -10,6 +10,15 @@ export const apiClient = {
     return res.json();
   },
 
+  getApplication: async (id) => {
+    const res = await fetch(`${API_BASE}/applications/${id}`);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to fetch application');
+    }
+    return res.json();
+  },
+
   getApplications: async (status = '', search = '') => {
     const params = new URLSearchParams();
     if (status && status !== 'all') params.append('status', status);

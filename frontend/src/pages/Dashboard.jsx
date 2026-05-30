@@ -1,236 +1,288 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../api/client';
 import StatsBar from '../components/StatsBar';
 
+// ── Language badge color map ───────────────────────────────────────────────
+const LANG_BADGE = {
+  English: 'bg-blue-50 text-blue-700 border border-blue-200',
+  Hindi:   'bg-orange-50 text-orange-700 border border-orange-200',
+  Tamil:   'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  Telugu:  'bg-purple-50 text-purple-700 border border-purple-200',
+  Marathi: 'bg-rose-50 text-rose-700 border border-rose-200',
+};
+
+// ── Status badge renderer ──────────────────────────────────────────────────
+const StatusBadge = ({ status }) => {
+  if (status === 'approved') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#006b2f]/10 text-[#005022]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#005022]" />
+        Approved
+      </span>
+    );
+  }
+  if (status === 'rejected') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-error-container text-on-error-container">
+        <span className="w-1.5 h-1.5 rounded-full bg-error" />
+        Rejected
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container">
+      <span className="w-1.5 h-1.5 rounded-full bg-on-secondary-container" />
+      Pending Review
+    </span>
+  );
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+const formatINR = (n) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+
+const formatDate = (str) =>
+  str ? new Date(str).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+
+const refId = (id) => `VT-${id.split('-')[0].toUpperCase()}`;
+
+// ── Main Dashboard Component ───────────────────────────────────────────────
 const Dashboard = ({ onViewDetails }) => {
   const [applications, setApplications] = useState([]);
-  const [stats, setStats] = useState({});
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [stats, setStats]               = useState({});
+  const [filter, setFilter]             = useState('all');
+  const [search, setSearch]             = useState('');
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
 
-  // Fetch applications and stats
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const [appsData, statsData] = await Promise.all([
-        apiClient.getApplications(statusFilter, searchTerm),
-        apiClient.getSummary()
+      const [apps, summary] = await Promise.all([
+        apiClient.getApplications(filter, search),
+        apiClient.getSummary(),
       ]);
-      setApplications(appsData);
-      setStats(statsData);
-      setError(null);
+      setApplications(apps);
+      setStats(summary);
     } catch (err) {
-      console.error(err);
-      setError('Failed to fetch dashboard data. Please try again.');
+      setError(err.message || 'Failed to load data.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, [filter, search]);
 
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Debounce search
+  const [searchInput, setSearchInput] = useState('');
   useEffect(() => {
-    fetchData();
-  }, [statusFilter, searchTerm]);
+    const t = setTimeout(() => setSearch(searchInput), 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
-  const handleStatusFilterChange = (filter) => {
-    setStatusFilter(filter);
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  // Get status badge colors
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'approved':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-tertiary-container text-tertiary">
-            <span className="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
-            Approved
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-error-container text-on-error-container border border-error/10">
-            <span className="w-1.5 h-1.5 rounded-full bg-error"></span>
-            Rejected
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container">
-            <span className="w-1.5 h-1.5 rounded-full bg-on-secondary-container"></span>
-            Pending Review
-          </span>
-        );
-    }
-  };
-
-  // Get language badge colors (Bonus requirement)
-  const getLanguageBadge = (lang) => {
-    switch (lang) {
-      case 'English':
-        return 'bg-blue-50 text-blue-700 border border-blue-200';
-      case 'Hindi':
-        return 'bg-orange-50 text-orange-700 border border-orange-200';
-      case 'Tamil':
-        return 'bg-green-50 text-green-700 border border-green-200';
-      case 'Telugu':
-        return 'bg-purple-50 text-purple-700 border border-purple-200';
-      case 'Marathi':
-        return 'bg-rose-50 text-rose-700 border border-rose-200';
-      default:
-        return 'bg-gray-50 text-gray-700 border border-gray-200';
-    }
-  };
+  const FILTERS = ['all', 'pending', 'approved', 'rejected'];
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 max-w-7xl mx-auto w-full">
-      {/* Dashboard Header */}
-      <header className="px-6 md:px-8 py-6 mt-4">
-        <h1 className="text-3xl font-bold tracking-tight text-on-surface">
+    <div className="flex-1 flex flex-col min-w-0 max-w-[1280px] mx-auto w-full">
+
+      {/* ── Page Header ── */}
+      <header className="px-8 py-6 mt-4">
+        <h1 className="text-3xl font-bold tracking-tight text-on-surface leading-tight">
           Applications Dashboard
         </h1>
-        <p className="text-sm text-on-surface-variant mt-2 max-w-2xl">
-          Monitor, review, and manage borrower applications coming in from the field.
+        <p className="text-sm text-on-surface-variant mt-1.5 max-w-xl">
+          Monitor, review, and manage borrower loan applications in real time.
         </p>
       </header>
 
-      {/* Content Area */}
-      <div className="px-6 md:px-8 pb-12 flex flex-col gap-8">
-        {/* Stats Row */}
-        <StatsBar stats={stats} />
+      <div className="px-8 pb-12 flex flex-col gap-8">
 
-        {/* Filters and Table Section */}
-        <section className="flex flex-col gap-4">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
-            {/* Search Input */}
+        {/* ── Stats Bar ── */}
+        <section className="bg-surface-container-lowest/80 backdrop-blur-md border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+          <div className="flex flex-col lg:flex-row lg:items-stretch divide-y lg:divide-y-0 lg:divide-x divide-outline-variant">
+            {[
+              {
+                label: 'Total Applications',
+                value: (stats.totalApplications ?? 0).toLocaleString('en-IN'),
+                icon: 'list_alt',
+                color: 'text-primary',
+              },
+              {
+                label: 'Total Amount',
+                value: formatINR(stats.totalAmountRequested ?? 0),
+                icon: 'payments',
+                color: 'text-primary',
+              },
+              {
+                label: 'Pending',
+                value: (stats.pendingCount ?? 0).toLocaleString('en-IN'),
+                icon: 'hourglass_empty',
+                color: 'text-on-surface-variant',
+              },
+              {
+                label: 'Approved',
+                value: (stats.approvedCount ?? 0).toLocaleString('en-IN'),
+                icon: 'check_circle',
+                color: 'text-[#005022]',
+              },
+              {
+                label: 'Rejected',
+                value: (stats.rejectedCount ?? 0).toLocaleString('en-IN'),
+                icon: 'cancel',
+                color: 'text-error',
+              },
+            ].map((item, i) => (
+              <div key={i} className="flex-1 flex items-center gap-4 px-6 py-5">
+                <div className={`${item.color} opacity-80`}>
+                  <span className="material-symbols-outlined text-[32px]">{item.icon}</span>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">
+                    {item.label}
+                  </p>
+                  <p className="text-2xl font-bold text-on-surface mt-0.5 leading-none">
+                    {item.value}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Filter + Search Controls ── */}
+        <section className="flex flex-col gap-5">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+
+            {/* Search */}
             <div className="relative w-full md:w-[360px]">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">
                 search
               </span>
               <input
                 type="text"
-                value={searchTerm}
-                onChange={handleSearchChange}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search by name or mobile..."
-                className="w-full pl-10 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant/40 shadow-sm transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-surface-container-lowest/80 backdrop-blur-md border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-outline-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 shadow-sm transition-all"
               />
             </div>
 
-            {/* Filter Buttons */}
-            <div className="flex items-center gap-1 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant overflow-x-auto shadow-sm w-full md:w-auto">
-              {['all', 'pending', 'approved', 'rejected'].map((filter) => (
+            {/* Status filter tabs */}
+            <div className="flex items-center gap-1 bg-surface-container-lowest/80 backdrop-blur-md border border-outline-variant rounded-lg p-1.5 shadow-sm overflow-x-auto w-full md:w-auto">
+              {FILTERS.map((f) => (
                 <button
-                  key={filter}
-                  onClick={() => handleStatusFilterChange(filter)}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold capitalize whitespace-nowrap transition-colors ${
-                    statusFilter === filter
-                      ? 'bg-surface-container-low border border-outline-variant/60 text-on-surface shadow-sm'
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-4 py-1.5 rounded text-xs font-semibold capitalize whitespace-nowrap transition-colors ${
+                    filter === f
+                      ? 'bg-surface-container-low border border-outline-variant shadow-sm text-on-surface'
                       : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50'
                   }`}
                 >
-                  {filter}
+                  {f}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Data Table */}
+          {/* ── Error ── */}
           {error && (
-            <div className="p-4 bg-error-container text-on-error-container rounded-xl border border-error/15">
+            <div className="flex items-center gap-2 p-4 bg-error-container text-on-error-container rounded-lg border border-error/20 text-sm">
+              <span className="material-symbols-outlined text-[18px]">warning</span>
               {error}
             </div>
           )}
 
-          {isLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+          {/* ── Table ── */}
+          {loading ? (
+            <div className="flex justify-center items-center py-24">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
             </div>
           ) : applications.length === 0 ? (
-            <div className="text-center py-20 bg-surface-container-lowest rounded-2xl border border-outline-variant/60 shadow-sm">
-              <span className="material-symbols-outlined text-[48px] text-on-surface-variant/30 mb-2">
-                info
-              </span>
-              <h3 className="text-lg font-bold text-on-surface">No Applications Found</h3>
+            <div className="text-center py-20 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm">
+              <span className="material-symbols-outlined text-[48px] text-outline-variant mb-3 block">inbox</span>
+              <h3 className="text-base font-bold text-on-surface">No Applications Found</h3>
               <p className="text-sm text-on-surface-variant mt-1">
-                Try adjusting your search query or filters.
+                {searchInput || filter !== 'all'
+                  ? 'Try adjusting your search or filters.'
+                  : 'Submit the first loan application to see it here.'}
               </p>
             </div>
           ) : (
-            <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/60 shadow-sm overflow-hidden">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[800px]">
-                  <thead>
-                    <tr className="border-b border-outline-variant bg-surface-container-low/30 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                      <th className="py-4 px-6">Borrower</th>
-                      <th className="py-4 px-6">Mobile</th>
-                      <th className="py-4 px-6">Amount</th>
-                      <th className="py-4 px-6">Purpose</th>
-                      <th className="py-4 px-6">Lang</th>
-                      <th className="py-4 px-6">Status</th>
-                      <th className="py-4 px-6">Date</th>
-                      <th className="py-4 px-6 text-right">Action</th>
+                <table className="w-full text-left border-collapse min-w-[840px]">
+                  {/* Table Header */}
+                  <thead className="border-b-2 border-outline-variant">
+                    <tr>
+                      {['Borrower', 'Mobile', 'Amount & Purpose', 'Lang', 'Status', 'Date', ''].map((h, i) => (
+                        <th
+                          key={i}
+                          className={`py-4 px-4 text-xs font-semibold text-on-surface-variant uppercase tracking-widest ${
+                            i === 6 ? 'text-right' : ''
+                          }`}
+                        >
+                          {h}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-outline-variant/60">
+
+                  {/* Table Body */}
+                  <tbody className="divide-y divide-outline-variant">
                     {applications.map((app) => (
                       <tr
                         key={app.id}
-                        className="hover:bg-surface-container-low/20 transition-colors group"
+                        className="hover:bg-surface-container-low/30 transition-colors group"
                       >
-                        <td className="py-4 px-6">
-                          <div className="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors">
+                        {/* Borrower */}
+                        <td className="py-4 px-4">
+                          <div className="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors leading-tight">
                             {app.name}
                           </div>
                           <div className="text-xs text-on-surface-variant font-mono mt-0.5">
-                            VT-{app.id.split('-')[0].toUpperCase()}
+                            {refId(app.id)}
                           </div>
                         </td>
-                        <td className="py-4 px-6 text-sm text-on-surface-variant">
+
+                        {/* Mobile */}
+                        <td className="py-4 px-4 text-sm text-on-surface-variant whitespace-nowrap">
                           +91 {app.mobile}
                         </td>
-                        <td className="py-4 px-6 text-sm font-semibold text-on-surface">
-                          {formatCurrency(app.amount)}
+
+                        {/* Amount & Purpose */}
+                        <td className="py-4 px-4">
+                          <div className="text-sm font-semibold text-on-surface">
+                            {formatINR(app.amount)}
+                          </div>
+                          <div className="text-xs text-on-surface-variant truncate max-w-[180px]">
+                            {app.purpose}
+                          </div>
                         </td>
-                        <td className="py-4 px-6 text-sm text-on-surface-variant max-w-[200px] truncate">
-                          {app.purpose}
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getLanguageBadge(app.language)}`}>
-                            {app.language}
+
+                        {/* Language badge */}
+                        <td className="py-4 px-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${LANG_BADGE[app.language] ?? 'bg-surface-variant text-on-surface-variant border border-outline-variant'}`}>
+                            {app.language.slice(0, 2).toUpperCase()}
                           </span>
                         </td>
-                        <td className="py-4 px-6">
-                          {getStatusBadge(app.status)}
+
+                        {/* Status */}
+                        <td className="py-4 px-4">
+                          <StatusBadge status={app.status} />
                         </td>
-                        <td className="py-4 px-6 text-sm text-on-surface-variant whitespace-nowrap">
+
+                        {/* Date */}
+                        <td className="py-4 px-4 text-sm text-on-surface-variant whitespace-nowrap">
                           {formatDate(app.created_at)}
                         </td>
-                        <td className="py-4 px-6 text-right">
+
+                        {/* Action */}
+                        <td className="py-4 px-4 text-right">
                           <button
                             onClick={() => onViewDetails(app.id)}
-                            className="text-sm font-semibold text-primary hover:text-primary-hover hover:underline transition-all"
+                            className="text-xs font-semibold text-primary hover:text-primary-container transition-colors"
                           >
                             View Details
                           </button>
@@ -241,10 +293,25 @@ const Dashboard = ({ onViewDetails }) => {
                 </table>
               </div>
 
-              {/* Pagination footer info */}
-              <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant/60 bg-surface-container-low/10 text-xs text-on-surface-variant font-medium">
-                <span>Showing {applications.length} entries</span>
-                <span className="font-mono">Vitto Operations Portal</span>
+              {/* Table Footer */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant bg-surface-container-low/20">
+                <p className="text-xs text-on-surface-variant font-medium">
+                  Showing <span className="font-bold text-on-surface">{applications.length}</span> {filter !== 'all' ? filter : ''} application{applications.length !== 1 ? 's' : ''}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled
+                    className="px-3 py-1.5 border border-outline-variant rounded bg-surface-container-lowest text-outline-variant cursor-not-allowed text-xs font-semibold shadow-sm"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    disabled
+                    className="px-3 py-1.5 border border-outline-variant rounded bg-surface-container-lowest text-outline-variant cursor-not-allowed text-xs font-semibold shadow-sm"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           )}
