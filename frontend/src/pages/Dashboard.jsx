@@ -119,21 +119,25 @@ const Dashboard = ({ onViewDetails }) => {
               />
             </div>
 
-            {/* Status filter tabs */}
-            <div className="flex items-center gap-1 bg-surface-container-lowest/80 backdrop-blur-md border border-outline-variant rounded-lg p-1.5 shadow-sm overflow-x-auto w-full md:w-auto">
-              {FILTERS.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-4 py-1.5 rounded text-xs font-semibold capitalize whitespace-nowrap transition-colors ${
-                    filter === f
-                      ? 'bg-surface-container-low border border-outline-variant shadow-sm text-on-surface'
-                      : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50'
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
+            {/* Status filter dropdown */}
+            <div className="relative w-full md:w-[200px]">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">
+                filter_alt
+              </span>
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 bg-surface-container-lowest/80 backdrop-blur-md border border-outline-variant rounded-lg text-sm text-on-surface appearance-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 shadow-sm transition-all cursor-pointer"
+              >
+                {FILTERS.map((f) => (
+                  <option key={f} value={f}>
+                    {f === 'all' ? 'All Statuses' : f.charAt(0).toUpperCase() + f.slice(1)}
+                  </option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">
+                expand_more
+              </span>
             </div>
           </div>
 
