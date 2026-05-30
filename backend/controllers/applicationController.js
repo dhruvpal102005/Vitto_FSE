@@ -43,10 +43,8 @@ export const getApplications = async (req, res, next) => {
     if (search) {
       const searchPattern = `%${search.trim()}%`;
       queryParams.push(searchPattern);
-      const nameIdx = queryParams.length;
-      queryParams.push(searchPattern);
-      const mobileIdx = queryParams.length;
-      conditions.push(`(name ILIKE $${nameIdx} OR mobile ILIKE $${mobileIdx})`);
+      const searchIdx = queryParams.length;
+      conditions.push(`(name ILIKE $${searchIdx} OR mobile ILIKE $${searchIdx})`);
     }
 
     if (conditions.length > 0) {

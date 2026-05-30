@@ -99,56 +99,7 @@ const Dashboard = ({ onViewDetails }) => {
       <div className="px-8 pb-12 flex flex-col gap-8">
 
         {/* ── Stats Bar ── */}
-        <section className="bg-surface-container-lowest/80 backdrop-blur-md border border-outline-variant rounded-xl shadow-sm overflow-hidden">
-          <div className="flex flex-col lg:flex-row lg:items-stretch divide-y lg:divide-y-0 lg:divide-x divide-outline-variant">
-            {[
-              {
-                label: 'Total Applications',
-                value: (stats.totalApplications ?? 0).toLocaleString('en-IN'),
-                icon: 'list_alt',
-                color: 'text-primary',
-              },
-              {
-                label: 'Total Amount',
-                value: formatINR(stats.totalAmountRequested ?? 0),
-                icon: 'payments',
-                color: 'text-primary',
-              },
-              {
-                label: 'Pending',
-                value: (stats.pendingCount ?? 0).toLocaleString('en-IN'),
-                icon: 'hourglass_empty',
-                color: 'text-on-surface-variant',
-              },
-              {
-                label: 'Approved',
-                value: (stats.approvedCount ?? 0).toLocaleString('en-IN'),
-                icon: 'check_circle',
-                color: 'text-[#005022]',
-              },
-              {
-                label: 'Rejected',
-                value: (stats.rejectedCount ?? 0).toLocaleString('en-IN'),
-                icon: 'cancel',
-                color: 'text-error',
-              },
-            ].map((item, i) => (
-              <div key={i} className="flex-1 flex items-center gap-4 px-6 py-5">
-                <div className={`${item.color} opacity-80`}>
-                  <span className="material-symbols-outlined text-[32px]">{item.icon}</span>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">
-                    {item.label}
-                  </p>
-                  <p className="text-2xl font-bold text-on-surface mt-0.5 leading-none">
-                    {item.value}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <StatsBar stats={stats} />
 
         {/* ── Filter + Search Controls ── */}
         <section className="flex flex-col gap-5">

@@ -1,6 +1,7 @@
 import app from './app.js';
 import { runMigrations } from './config/db.js';
 
+// Trigger nodemon reload
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {

@@ -26,12 +26,53 @@ if (!connectionString) {
 
 const { Pool } = pg;
 
+let cleanConnectionString = connectionString;
+if (cleanConnectionString && cleanConnectionString.includes('?')) {
+  const [base, query] = cleanConnectionString.split('?');
+  const params = query.split('&').filter((p) => !p.startsWith('sslmode='));
+  cleanConnectionString = base + (params.length > 0 ? '?' + params.join('&') : '');
+}
+
 const pool = new Pool({
-  connectionString,
-  ssl: process.env.NODE_ENV === 'production' || connectionString?.includes('neon')
-    ? { rejectUnauthorized: false }
+  connectionString: cleanConnectionString,
+  ssl: process.env.NODE_ENV === 'production' || cleanConnectionString?.includes('neon')
+    ? { rejectUnauthorized: false, minVersion: 'TLSv1.2' }
     : false
 });
+
+// Intercept pool.query to add automatic retry for transient database/network errors
+const originalQuery = pool.query.bind(pool);
+pool.query = async function (text, params) {
+  const maxRetries = 3;
+  const initialDelay = 1000; // ms
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await originalQuery(text, params);
+    } catch (error) {
+      const isTransient = 
+        error.code === 'ECONNRESET' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ENOTFOUND' ||
+        error.code === 'EPIPE' ||
+        error.syscall === 'read' ||
+        error.syscall === 'connect' ||
+        error.message?.includes('ECONNRESET') ||
+        error.message?.includes('ETIMEDOUT') ||
+        error.message?.includes('getaddrinfo') ||
+        error.message?.includes('connection') ||
+        error.message?.includes('terminating connection');
+
+      if (isTransient && i < maxRetries - 1) {
+        const delay = initialDelay * Math.pow(2, i); // exponential backoff
+        console.warn(`[DB WARNING] Transient query failure (${error.code || error.message}). Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+};
 
 export const runMigrations = async () => {
   try {
