@@ -42,13 +42,18 @@ const pool = new Pool({
 
 // Intercept pool.query to add automatic retry for transient database/network errors
 const originalQuery = pool.query.bind(pool);
-pool.query = async function (text, params) {
+pool.query = async function (...args) {
+  // If the last argument is a callback function, forward it directly to avoid breaking pg internals
+  if (typeof args[args.length - 1] === 'function') {
+    return originalQuery(...args);
+  }
+
   const maxRetries = 3;
   const initialDelay = 1000; // ms
 
   for (let i = 0; i < maxRetries; i++) {
     try {
-      return await originalQuery(text, params);
+      return await originalQuery(...args);
     } catch (error) {
       const isTransient = 
         error.code === 'ECONNRESET' ||
