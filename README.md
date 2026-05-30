@@ -172,24 +172,44 @@ Get dashboard metrics summaries.
 ## Production Deployment Steps
 
 ### 1. Database (Neon)
-1. Sign up on [Neon](https://neon.tech) and create a new PostgreSQL database.
+1. Sign up on [Neon](https://neon.tech) and create a new serverless PostgreSQL database.
 2. Retrieve the Connection String (`DATABASE_URL`).
 
-### 2. Backend (Render)
+---
+
+### Option A: Single Vercel Monorepo Deployment (Recommended)
+This method hosts **both** the React frontend and Express backend together under a single Vercel project on the same domain. It uses serverless function routing, avoids CORS settings, and supports automatic relative URL routing.
+
+1. Import your repository into **Vercel**.
+2. **Framework Preset:** Select **Vite**.
+3. **Root Directory:** Keep as the root directory (do **NOT** change to `frontend`).
+4. **Build & Development Settings:**
+   * **Build Command:** Toggle override and type `cd frontend && npm install && npm run build`
+   * **Output Directory:** Toggle override and type `frontend/dist`
+5. **Environment Variables:**
+   * `DATABASE_URL` = `<your_neon_db_url>`
+   * `NODE_ENV` = `production`
+6. Click **Deploy**. Vercel will install the root dependencies, build the frontend, and automatically run the backend serverless routes configured in `api/index.js`.
+
+---
+
+### Option B: Split Deployment (Vercel Frontend + Render Backend)
+
+#### 1. Backend (Render)
 1. Go to [Render](https://render.com) and create a new **Web Service**.
 2. Connect your GitHub repository.
-3. Set the Root Directory to `backend`.
-4. Set Build Command to `npm install`.
-5. Set Start Command to `node index.js`.
+3. Set the **Root Directory** to `backend`.
+4. Set **Build Command** to `npm install`.
+5. Set **Start Command** to `node index.js`.
 6. Define Environment Variables:
-   - `DATABASE_URL` = `<your_neon_db_url>`
-   - `NODE_ENV` = `production`
-   - `CORS_ORIGIN` = `<your_vercel_frontend_url>`
+   * `DATABASE_URL` = `<your_neon_db_url>`
+   * `NODE_ENV` = `production`
+   * `CORS_ORIGIN` = `https://<your_vercel_project>.vercel.app`
 
-### 3. Frontend (Vercel)
-1. Sign up on [Vercel](https://vercel.com) and import your repo.
-2. Select the framework preset as **Vite**.
-3. Set the Root Directory to `frontend`.
+#### 2. Frontend (Vercel)
+1. Import your repository into **Vercel**.
+2. **Framework Preset:** Select **Vite**.
+3. Set the **Root Directory** to `frontend`.
 4. Define Environment Variables:
-   - `VITE_API_URL` = `<your_render_backend_url>/api`
-5. Click Deploy.
+   * `VITE_API_URL` = `https://<your_render_service>.onrender.com/api`
+5. Click **Deploy**.

@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import applicationRoutes from './routes/applicationRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { runMigrations } from './config/db.js';
 
 dotenv.config();
 
@@ -15,6 +16,20 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Serverless migration runner (runs migrations once per container boot/cold start)
+let migrated = false;
+app.use(async (req, res, next) => {
+  if (!migrated) {
+    try {
+      await runMigrations();
+      migrated = true;
+    } catch (err) {
+      console.error('Serverless migration failed:', err);
+    }
+  }
+  next();
+});
 
 // Health Check API
 app.get('/health', (req, res) => {
